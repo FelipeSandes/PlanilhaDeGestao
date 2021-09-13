@@ -1,0 +1,19 @@
+Private Sub WORKBOOK_OPEN()
+    'Iniio:
+Application.ScreenUpdating = False
+    With Application
+        .WindowState = xlNormal
+        .Top
+        
+        .Top = 200
+        .Left = 300
+        .Height = 80
+        .Width = 125
+    End With
+    
+    'Nome do formulário que será aberto ao iniciar
+    frmCadastro.Show
+    
+    'Fim da Sub
+Application.ScreenUpdating = True
+End Sub

@@ -1,0 +1,288 @@
+'Código VBA referente ao formulário de Pequisa (frmPesquisa)
+
+Option Explicit
+
+'constantes para auxiliar na verifica‹o do c—digoo
+Private Const Ascendente As Byte = 0
+Private Const Descendente As Byte = 1
+
+Private Sub btnExportar_Click()
+    Call Exportar
+End Sub
+
+Private Sub btnFiltrar_Click()
+    Call PopulaListBox(txtMatricula.Text, txtNome.Text, txtCaixa.Text, txtDesligamento.Text, txtSuspensao.Text)
+End Sub
+
+Private Sub lblNomeContato_Click()
+
+End Sub
+
+Private Sub lblCaixa_Click()
+
+End Sub
+
+Private Sub lstLista_DblClick(ByVal Cancel As MSForms.ReturnBoolean)
+    If lstLista.ListIndex > 0 Then
+        Dim indiceRegistro As Long
+        indiceRegistro = frmCadastro.ProcuraIndiceRegistroPodId(lstLista.List(lstLista.ListIndex, 0))
+        If indiceRegistro <> -1 Then
+            Call frmCadastro.CarregaRegistroPorIndice(indiceRegistro)
+        End If
+        Unload Me
+    Else
+        lblMensagens.Caption = "ƒ preciso selecionar um item v‡lido na lista"
+    End If
+End Sub
+
+Private Sub txtCaixa_Change()
+
+End Sub
+
+Private Sub UserForm_Initialize()
+'preenche o cboDirecao e seleciona o primeiro item
+    cboDirecao.Clear
+    cboDirecao.AddItem "Ascendente"
+    cboDirecao.AddItem "Descendente"
+    cboDirecao.ListIndex = 0
+
+    Call PopulaListBox(vbNullString, vbNullString, vbNullString, vbNullString, vbNullString)
+End Sub
+
+Private Sub Exportar()
+    Dim i As Integer
+    Dim NewWorkBook As Workbook
+    Dim rst As ADODB.Recordset
+    ' Preenche o RecordSet com os filtros atuais
+    Set rst = PreecheRecordSet(txtMatricula.Text, txtNome.Text, txtCaixa.Text, txtDesligamento.Text, txtSuspensao.Text)
+    'cria um novo Workbook
+    Set NewWorkBook = Application.Workbooks.Add
+    ' Efetua loop em todos os campos, retornando os nomes de campos
+    ' ˆ planilha.
+    For i = 0 To rst.Fields.Count - 1
+        NewWorkBook.Sheets(1).Range("A1").Offset(0, i).Value = rst.Fields(i).Name
+    Next i
+
+    NewWorkBook.Sheets(1).Range("A2").CopyFromRecordset rst
+    NewWorkBook.Activate
+End Sub
+
+
+Private Sub PopulaCidades()
+    Dim conn As ADODB.Connection
+    Dim rst As ADODB.Recordset
+    Dim sql As String
+
+    Set conn = New ADODB.Connection
+    With conn
+        .Provider = "Microsoft.JET.OLEDB.4.0"
+        .ConnectionString = "Data Source=" & ThisWorkbook.FullName & ";Extended Properties=Excel 8.0;"
+        .Open
+    End With
+
+    sql = "SELECT DISTINCT Cidade FROM [Fornecedores$]"
+
+    Set rst = New ADODB.Recordset
+    With rst
+        .ActiveConnection = conn
+        .Open sql, conn, adOpenDynamic, _
+              adLockBatchOptimistic
+    End With
+        rst.MoveNext
+
+    ' Fecha o conjunto de registros.
+    Set rst = Nothing
+    ' Fecha a conex‹o.
+    conn.Close
+
+End Sub
+
+Private Sub PopulaListBox(ByVal Matricula As String, _
+                          ByVal Nome As String, _
+                          ByVal Caixa As String, _
+                          ByVal Desligamento As String, _
+                          ByVal Suspensao As String)
+
+    On Error GoTo TrataErro
+
+    Dim rst As ADODB.Recordset
+    Dim campo As Field
+    Dim myArray() As Variant
+    Dim i As Integer
+
+    Set rst = PreecheRecordSet(Matricula, Nome, Caixa, Desligamento, Suspensao)
+
+    'pega o nœmero de registros para atribu’-lo ao listbox
+    lstLista.ColumnCount = rst.Fields.Count
+
+    'preenche o combobox com os nomes dos campos
+    'persiste o ’ndice
+    Dim indiceTemp As Long
+    indiceTemp = cboOrdenarPor.ListIndex
+    cboOrdenarPor.Clear
+    For Each campo In rst.Fields
+        cboOrdenarPor.AddItem campo.Name
+    Next
+    'recupera o ’ndice selecionado
+    cboOrdenarPor.ListIndex = indiceTemp
+
+    'coloca as linhas do RecordSet num Array, se houver linhas neste
+    If Not rst.EOF And Not rst.BOF Then
+        myArray = rst.GetRows
+        'troca linhas por colunas no Array
+        myArray = Array2DTranspose(myArray)
+        'atribui o Array ao listbox
+        lstLista.List = myArray
+        'adiciona a linha de cabealho da colunaa
+        lstLista.AddItem , 0
+        'preenche o cabealhoo
+        For i = 0 To rst.Fields.Count - 1
+            lstLista.List(0, i) = rst.Fields(i).Name
+        Next i
+        'seleciona o primeiro item da lista
+        lstLista.ListIndex = 0
+    Else
+        lstLista.Clear
+    End If
+
+    'atualiza o label de mensagens
+    If lstLista.ListCount <= 0 Then
+        lblMensagens.Caption = lstLista.ListCount & " registros encontrados"
+    Else
+        lblMensagens.Caption = lstLista.ListCount - 1 & " registros encontrados"
+    End If
+
+    ' Fecha o conjunto de registros.
+    Set rst = Nothing
+    ' Fecha a conex‹o.
+    'conn.Close
+
+TrataSaida:
+    Exit Sub
+TrataErro:
+    Debug.Print Err.Description & vbNewLine & Err.Number & vbNewLine & Err.Source
+    Resume TrataSaida
+End Sub
+
+Private Function PreecheRecordSet(ByVal Matricula As String, _
+                                  ByVal Nome As String, _
+                                  ByVal Caixa As String, _
+                                  ByVal Desligamento As String, _
+                                  ByVal Suspensao As String) As Recordset
+    On Error GoTo TrataErro
+
+    Dim conn As ADODB.Connection
+    Dim rst As ADODB.Recordset
+    Dim sql As String
+    Dim sqlWhere As String
+    Dim sqlOrderBy As String
+    Dim i As Integer
+    Dim campo As Field
+    Dim myArray() As Variant
+
+    Set conn = New ADODB.Connection
+    With conn
+        .Provider = "Microsoft.JET.OLEDB.4.0"
+        .ConnectionString = "Data Source=" & ThisWorkbook.FullName & ";Extended Properties=Excel 8.0;"
+        .Open
+    End With
+
+    sql = "SELECT * FROM [Fornecedores$]"
+
+    'monta a cl‡usula WHERE
+    'NomeDaEmpresa
+    Call MontaClausulaWhere(txtMatricula.Name, "Matricula", sqlWhere)
+
+    'NomeDoContato
+    Call MontaClausulaWhere(txtNome.Name, "Nome", sqlWhere)
+
+    'Caixa
+    Call MontaClausulaWhere(txtCaixa.Name, "Caixa", sqlWhere)
+
+    'Telefone
+    Call MontaClausulaWhere(txtDesligamento.Name, "Desligamento", sqlWhere)
+
+    'Regi‹o
+    Call MontaClausulaWhere(txtSuspensao.Name, "Suspens‹o", sqlWhere)
+
+    'faz a uni‹o da string SQL com a cl‡usula WHERE
+    If sqlWhere <> vbNullString Then
+        sql = sql & " WHERE " & sqlWhere
+    End If
+
+    'faz a uni‹o da string SQL com a cl‡usula ORDER BY
+    If cboOrdenarPor.ListIndex <> -1 Then
+        sqlOrderBy = " ORDER BY " & cboOrdenarPor.List(cboOrdenarPor.ListIndex, 0)
+        'define a dire‹oo
+        Select Case cboDirecao.ListIndex
+        Case Ascendente
+            sqlOrderBy = sqlOrderBy & " ASC"
+        Case Descendente
+            sqlOrderBy = sqlOrderBy & " DESC"
+        End Select
+        'une a query order ao sql
+        sql = sql & sqlOrderBy
+    End If
+
+    Set rst = New ADODB.Recordset
+    rst.CursorLocation = adUseClient
+    With rst
+        .ActiveConnection = conn
+        .Open sql, conn, adOpenForwardOnly, _
+              adLockBatchOptimistic
+    End With
+
+    Set rst.ActiveConnection = Nothing
+
+    ' Fecha a conex‹o.
+    conn.Close
+
+    Set PreecheRecordSet = rst
+    Exit Function
+TrataErro:
+    Set rst = Nothing
+End Function
+
+Private Sub MontaClausulaWhere(ByVal NomeControle As String, ByVal NomeCampo As String, ByRef sqlWhere As String)
+'NomeDoContato
+    If Trim(Me.Controls(NomeControle).Text) <> vbNullString Then
+        If sqlWhere <> vbNullString Then
+            sqlWhere = sqlWhere & " AND"
+        End If
+        sqlWhere = sqlWhere & " UCASE(" & NomeCampo & ") LIKE UCASE('%" & Trim(Me.Controls(NomeControle).Text) & "%')"
+    End If
+End Sub
+
+'Faz a transpasi‹o de um array, transformando linhas em colunass
+Private Function Array2DTranspose(avValues As Variant) As Variant
+    Dim lThisCol As Long, lThisRow As Long
+    Dim lUb2 As Long, lLb2 As Long
+    Dim lUb1 As Long, lLb1 As Long
+    Dim avTransposed As Variant
+
+    If IsArray(avValues) Then
+        On Error GoTo ErrFailed
+        lUb2 = UBound(avValues, 2)
+        lLb2 = LBound(avValues, 2)
+        lUb1 = UBound(avValues, 1)
+        lLb1 = LBound(avValues, 1)
+
+        ReDim avTransposed(lLb2 To lUb2, lLb1 To lUb1)
+        For lThisCol = lLb1 To lUb1
+            For lThisRow = lLb2 To lUb2
+                avTransposed(lThisRow, lThisCol) = avValues(lThisCol, lThisRow)
+            Next
+        Next
+    End If
+
+    Array2DTranspose = avTransposed
+    Exit Function
+
+ErrFailed:
+    Debug.Print Err.Description
+    Debug.Assert False
+    Array2DTranspose = Empty
+    Exit Function
+    Resume
+End Function
+

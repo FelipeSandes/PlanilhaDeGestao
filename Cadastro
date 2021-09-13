@@ -1,0 +1,333 @@
+'Código VBA para o formulário de cadastro (frmCadastro)
+
+Option Explicit
+
+Const colCodigoDoFornecedor As Integer = 1
+Const colMatricula As Integer = 2
+Const colNome As Integer = 3
+Const colSituacao As Integer = 4
+Const colCargo As Integer = 5
+Const colRegime As Integer = 6
+Const colSuspensao As Integer = 7
+Const colAdmissao As Integer = 8
+Const colDesligamento As Integer = 9
+Const colCaixa As Integer = 10
+Const colObservacao As Integer = 11
+Const indiceMinimo As Byte = 2
+Const corDisabledTextBox As Long = -2147483633
+Const corEnabledTextBox As Long = -2147483643
+
+Private wsCadastro As Worksheet
+Private indiceRegistro As Long
+
+Private Sub btnCancelar_Click()
+    btnOK.Enabled = False
+    btnCancelar.Enabled = False
+    Call DesabilitaControles
+    Call CarregaDadosInicial
+    Call HabilitaBotoesAlteracao
+End Sub
+
+Private Sub btnOK_Click()
+    Dim proximoId As Long
+
+    'Altera
+    If optAlterar.Value Then
+        Call SalvaRegistro(CLng(txtCodigoFornecedor.Text), indiceRegistro)
+        lblMensagem.Caption = "Registro salvo com sucesso"
+    End If
+    'Novo
+    If optNovo.Value Then
+        proximoId = PegaProximoId
+        'pega a pr—xima linha
+        Dim proximoIndice As Long
+        proximoIndice = wsCadastro.UsedRange.Rows.Count + 1
+        Call SalvaRegistro(proximoId, proximoIndice)
+        txtCodigoFornecedor = proximoId
+        lblMensagem.Caption = "Registro salvo com sucesso"
+    End If
+    'Excluir
+    If optExcluir.Value Then
+        Dim result As VbMsgBoxResult
+        result = MsgBox("Deseja excluir o registro n_ " & txtCodigoFornecedor.Text & " ?", vbYesNo, "Confirma‹o"))
+
+        If result = vbYes Then
+            wsCadastro.Range(wsCadastro.Cells(indiceRegistro, colCodigoDoFornecedor), wsCadastro.Cells(indiceRegistro, colCodigoDoFornecedor)).EntireRow.Delete
+            Call CarregaDadosInicial
+            lblMensagem.Caption = "Registro exclu’do com sucesso"
+        End If
+    End If
+
+    Call HabilitaBotoesAlteracao
+    Call DesabilitaControles
+
+End Sub
+
+
+Private Sub btnPesquisar_Click()
+    frmPesquisa.Show
+End Sub
+
+Private Sub lblAdmissao_Click()
+
+End Sub
+
+Private Sub lblCodigoFornecedor_Click()
+
+End Sub
+
+Private Sub lblCargo_Click()
+
+End Sub
+
+Private Sub lblSuspensao_Click()
+
+End Sub
+
+Private Sub lblDesligamento_Click()
+
+End Sub
+
+Private Sub optAlterar_Click()
+    If txtCodigoFornecedor.Text <> vbNullString And txtCodigoFornecedor.Text <> "" Then
+        Call HabilitaControles
+        Call DesabilitaBotoesAlteracao
+        'd‡ o foco ao primeiro controle de dados
+        txtMatricula.SetFocus
+    Else
+        lblMensagem.Caption = "N‹o h‡ registro a ser alterado"
+    End If
+End Sub
+
+Private Sub optExcluir_Click()
+    If txtCodigoFornecedor.Text <> vbNullString And txtCodigoFornecedor.Text <> "" Then
+        Call DesabilitaBotoesAlteracao
+        lblMensagem.Caption = "Modo de exclus‹o. Confira o dados do registro antes de exclu’-lo"
+    Else
+        lblMensagem.Caption = "N‹o h‡ registro a ser exclu’do"
+    End If
+End Sub
+
+Private Sub optNovo_Click()
+    Call LimpaControles
+    Call HabilitaControles
+    Call DesabilitaBotoesAlteracao
+    'd‡ o foco ao primeiro controle de dados
+    txtMatricula.SetFocus
+End Sub
+
+Private Sub UserForm_Initialize()
+    Set wsCadastro = ThisWorkbook.Worksheets("Fornecedores")
+    Call HabilitaBotoesAlteracao
+    Call CarregaDadosInicial
+    Call DesabilitaControles
+End Sub
+
+Private Sub btnAnterior_Click()
+    If indiceRegistro > indiceMinimo Then
+        indiceRegistro = indiceRegistro - 1
+    End If
+    If indiceRegistro > 1 Then
+        Call CarregaRegistro
+    End If
+End Sub
+
+Private Sub btnPrimeiro_Click()
+    indiceRegistro = indiceMinimo
+    If indiceRegistro > 1 Then
+        Call CarregaRegistro
+    End If
+End Sub
+
+Private Sub btnProximo_Click()
+    If indiceRegistro < wsCadastro.UsedRange.Rows.Count Then
+        indiceRegistro = indiceRegistro + 1
+    End If
+    If indiceRegistro > 1 Then
+        Call CarregaRegistro
+    End If
+End Sub
+
+Private Sub btnUltimo_Click()
+    indiceRegistro = wsCadastro.UsedRange.Rows.Count
+    If indiceRegistro > 1 Then
+        Call CarregaRegistro
+    End If
+End Sub
+
+Private Sub CarregaDadosInicial()
+    indiceRegistro = 2
+    Call CarregaRegistro
+End Sub
+
+Private Sub CarregaRegistro()
+'carrega os dados do primeiro registro
+    With wsCadastro
+        If Not IsEmpty(.Cells(indiceRegistro, colSituacao)) Then
+            Me.txtCodigoFornecedor.Text = .Cells(indiceRegistro, colCodigoDoFornecedor).Value
+            Me.txtMatricula.Text = .Cells(indiceRegistro, colMatricula).Value
+            Me.txtNome.Text = .Cells(indiceRegistro, colNome).Value
+            Me.txtSituacao.Text = .Cells(indiceRegistro, colSituacao).Value
+            Me.txtCargo.Text = .Cells(indiceRegistro, colCargo).Value
+            Me.txtRegime.Text = .Cells(indiceRegistro, colRegime).Value
+            Me.txtSuspensao.Text = .Cells(indiceRegistro, colSuspensao).Value
+            Me.txtAdmissao.Text = .Cells(indiceRegistro, colAdmissao).Value
+            Me.txtDesligamento.Text = .Cells(indiceRegistro, colDesligamento).Value
+            Me.txtCaixa.Text = .Cells(indiceRegistro, colCaixa).Value
+            Me.txtObservacao.Text = .Cells(indiceRegistro, colObservacao).Value
+        End If
+    End With
+
+    Call AtualizaRegistroCorrente
+End Sub
+
+Public Sub CarregaRegistroPorIndice(ByVal indice As Long)
+'carrega os dados do registro baseado no ’ndice
+    indiceRegistro = indice
+
+    Call CarregaRegistro
+End Sub
+
+Private Sub SalvaRegistro(ByVal id As Long, ByVal indice As Long)
+    With wsCadastro
+        .Cells(indice, colCodigoDoFornecedor).Value = id
+        .Cells(indice, colMatricula).Value = Me.txtMatricula.Text
+        .Cells(indice, colNome).Value = Me.txtNome.Text
+        .Cells(indice, colSituacao).Value = Me.txtSituacao.Text
+        .Cells(indice, colCargo).Value = Me.txtCargo.Text
+        .Cells(indice, colRegime).Value = Me.txtRegime.Text
+        .Cells(indice, colSuspensao).Value = Me.txtSuspensao.Text
+        .Cells(indice, colAdmissao).Value = Me.txtAdmissao.Text
+        .Cells(indice, colDesligamento).Value = Me.txtDesligamento.Text
+        .Cells(indice, colCaixa).Value = Me.txtCaixa.Text
+        .Cells(indice, colObservacao).Value = Me.txtObservacao.Text
+    End With
+
+    Call AtualizaRegistroCorrente
+End Sub
+
+Private Function PegaProximoId() As Long
+    Dim rangeIds As Range
+    'pega o range que se refere a toda a coluna do c—digo (id)
+    Set rangeIds = wsCadastro.Range(wsCadastro.Cells(indiceMinimo, colCodigoDoFornecedor), wsCadastro.Cells(wsCadastro.UsedRange.Rows.Count, colCodigoDoFornecedor))
+    PegaProximoId = WorksheetFunction.Max(rangeIds) + 1
+End Function
+
+Private Sub AtualizaRegistroCorrente()
+    lblNavigator.Caption = indiceRegistro - 1 & " de " & wsCadastro.UsedRange.Rows.Count - 1
+    lblMensagem.Caption = ""
+End Sub
+
+Private Sub LimpaControles()
+    Me.txtCodigoFornecedor.Text = ""
+    Me.txtMatricula.Text = ""
+    Me.txtNome.Text = ""
+    Me.txtSituacao.Text = ""
+    Me.txtCargo.Text = ""
+    Me.txtRegime.Text = ""
+    Me.txtSuspensao.Text = ""
+    Me.txtAdmissao.Text = ""
+    Me.txtDesligamento.Text = ""
+    Me.txtCaixa.Text = ""
+    Me.txtObservacao.Text = ""
+End Sub
+
+Private Sub HabilitaControles()
+'Me.txtCodigoFornecedor.Locked = False
+    Me.txtMatricula.Locked = False
+    Me.txtNome.Locked = False
+    Me.txtSituacao.Locked = False
+    Me.txtCargo.Locked = False
+    Me.txtRegime.Locked = False
+    Me.txtSuspensao.Locked = False
+    Me.txtAdmissao.Locked = False
+    Me.txtDesligamento.Locked = False
+    Me.txtCaixa.Locked = False
+    Me.txtObservacao.Locked = False
+
+    Me.txtMatricula.BackColor = corEnabledTextBox
+    Me.txtNome.BackColor = corEnabledTextBox
+    Me.txtSituacao.BackColor = corEnabledTextBox
+    Me.txtCargo.BackColor = corEnabledTextBox
+    Me.txtRegime.BackColor = corEnabledTextBox
+    Me.txtSuspensao.BackColor = corEnabledTextBox
+    Me.txtAdmissao.BackColor = corEnabledTextBox
+    Me.txtDesligamento.BackColor = corEnabledTextBox
+    Me.txtCaixa.BackColor = corEnabledTextBox
+    Me.txtObservacao.BackColor = corEnabledTextBox
+End Sub
+
+Private Sub DesabilitaControles()
+'Me.txtCodigoFornecedor.Locked = True
+    Me.txtMatricula.Locked = True
+    Me.txtNome.Locked = True
+    Me.txtSituacao.Locked = True
+    Me.txtCargo.Locked = True
+    Me.txtRegime.Locked = True
+    Me.txtSuspensao.Locked = True
+    Me.txtAdmissao.Locked = True
+    Me.txtDesligamento.Locked = True
+    Me.txtCaixa.Locked = True
+    Me.txtObservacao.Locked = True
+
+    Me.txtMatricula.BackColor = corDisabledTextBox
+    Me.txtNome.BackColor = corDisabledTextBox
+    Me.txtSituacao.BackColor = corDisabledTextBox
+    Me.txtCargo.BackColor = corDisabledTextBox
+    Me.txtRegime.BackColor = corDisabledTextBox
+    Me.txtSuspensao.BackColor = corDisabledTextBox
+    Me.txtAdmissao.BackColor = corDisabledTextBox
+    Me.txtDesligamento.BackColor = corDisabledTextBox
+    Me.txtCaixa.BackColor = corDisabledTextBox
+    Me.txtObservacao.BackColor = corDisabledTextBox
+End Sub
+
+Private Sub HabilitaBotoesAlteracao()
+'habilita os bot›es de altera‹oo
+    optAlterar.Enabled = True
+    optExcluir.Enabled = True
+    optNovo.Enabled = True
+    btnPesquisar.Enabled = True
+    btnOK.Enabled = False
+    btnCancelar.Enabled = False
+
+    'limpa os valores dos controles
+    optAlterar.Value = False
+    optExcluir.Value = False
+    optNovo.Value = False
+End Sub
+
+Private Sub DesabilitaBotoesAlteracao()
+'desabilita os bot›es de altera‹oo
+    optAlterar.Enabled = False
+    optExcluir.Enabled = False
+    optNovo.Enabled = False
+    btnPesquisar.Enabled = False
+    btnOK.Enabled = True
+    btnCancelar.Enabled = True
+End Sub
+
+Public Function ProcuraIndiceRegistroPodId(ByVal id As Long) As Long
+    Dim i As Long
+    Dim retorno As Long
+    Dim encontrado As Boolean
+
+    i = indiceMinimo
+    With wsCadastro
+        Do While Not IsEmpty(.Cells(i, colCodigoDoFornecedor))
+            If .Cells(i, colCodigoDoFornecedor).Value = id Then
+                retorno = i
+                encontrado = True
+                Exit Do
+            End If
+            i = i + 1
+        Loop
+    End With
+
+    'caso n‹o encontre o registro, retorna -1
+    If Not encontrado Then
+        retorno = -1
+    End If
+
+    ProcuraIndiceRegistroPodId = i
+End Function
