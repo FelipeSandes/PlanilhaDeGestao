@@ -52,7 +52,7 @@ Private Sub btnOK_Click()
         result = MsgBox("Deseja excluir o registro n_ " & txtCodigoFornecedor.Text & " ?", vbYesNo, "Confirma‹o"))
 
         If result = vbYes Then
-            wsCadastro.Range(wsCadastro.Cells(indiceRegistro, colCodigoDoFornecedor), wsCadastro.Cells(indiceRegistro, colCodigoDoFornecedor)).EntireRow.Delete
+            wsCadastro.Range(wsCadastro.Cells(indiceRegistro, colCodigoDoFornecedor), wsCadastro.Cells(indiceRegistro, colCodigoDoFornecedor).EntireRow.Delete
             Call CarregaDadosInicial
             lblMensagem.Caption = "Registro exclu’do com sucesso"
         End If

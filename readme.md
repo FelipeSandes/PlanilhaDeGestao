@@ -11,4 +11,5 @@ Compatibilidade a partir do Office 2007 - 2013
 Em Breve:
 
 Manual de Manutenção em Breve
+
 Compatibilidde com Office mais atuais.
